@@ -1,4 +1,4 @@
-# Tinystore
+#Tinystore
 
 A toy KV store with log. My layoff sanity project.
 

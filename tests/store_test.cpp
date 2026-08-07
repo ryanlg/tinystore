@@ -2,8 +2,7 @@
 
 #include <tinystore/store.hpp>
 
-TEST_CASE("a new store does not contain a key")
-{
+TEST_CASE("a new store does not contain a key") {
     tinystore::Store store;
 
     const auto result = store.get("missing");
@@ -11,8 +10,7 @@ TEST_CASE("a new store does not contain a key")
     REQUIRE_FALSE(result.has_value());
 }
 
-TEST_CASE("put stores a value")
-{
+TEST_CASE("put stores a value") {
     tinystore::Store store;
 
     store.put("language", "C++");
@@ -23,8 +21,7 @@ TEST_CASE("put stores a value")
     REQUIRE(*result == "C++");
 }
 
-TEST_CASE("put replaces an existing value")
-{
+TEST_CASE("put replaces an existing value") {
     tinystore::Store store;
 
     store.put("status", "old");

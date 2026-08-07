@@ -29,6 +29,7 @@
               clang
               catch2_3
               pkg-config
+              llvmPackages.clang-tools
             ];
           };
         }
