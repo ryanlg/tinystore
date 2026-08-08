@@ -26,10 +26,12 @@
         {
           default = pkgs.mkShell {
             packages = with pkgs; [
-              clang
               catch2_3
-              pkg-config
+              clang
+              cmake
               llvmPackages.clang-tools
+              ninja
+              pkg-config
             ];
           };
         }
