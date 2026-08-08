@@ -1,9 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <tinystore/backends/inmemory.hpp>
 #include <tinystore/store.hpp>
 
 TEST_CASE("a new store does not contain a key") {
-    tinystore::Store store;
+    tinystore::Store store(std::make_unique<tinystore::InMemoryBackend>());
 
     const auto result = store.get("missing");
 
@@ -11,7 +12,7 @@ TEST_CASE("a new store does not contain a key") {
 }
 
 TEST_CASE("put stores a value") {
-    tinystore::Store store;
+    tinystore::Store store(std::make_unique<tinystore::InMemoryBackend>());
 
     store.put("language", "C++");
 
@@ -22,7 +23,7 @@ TEST_CASE("put stores a value") {
 }
 
 TEST_CASE("put replaces an existing value") {
-    tinystore::Store store;
+    tinystore::Store store(std::make_unique<tinystore::InMemoryBackend>());
 
     store.put("status", "old");
     store.put("status", "new");

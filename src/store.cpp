@@ -1,17 +1,14 @@
+#include <tinystore/backends/base.hpp>
 #include <tinystore/store.hpp>
 
 namespace tinystore {
 
+Store::Store(std::unique_ptr<StoreBackend> backend) : _backend(std::move(backend)) {}
+
 void Store::put(std::string key, std::string value) {
-    _backing.insert_or_assign(std::move(key), std::move(value));
+    _backend->put(std::move(key), std::move(value));
 }
 
-std::optional<std::string> Store::get(const std::string &key) {
-    const auto found = _backing.find(key);
-    if (found == _backing.end())
-        return std::nullopt;
-
-    return found->second;
-}
+std::optional<std::string> Store::get(const std::string &key) { return _backend->get(key); }
 
 } // namespace tinystore
