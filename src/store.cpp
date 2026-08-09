@@ -1,9 +1,22 @@
-#include <tinystore/backends/base.hpp>
+#include <tinystore/backends/inmemory.hpp>
 #include <tinystore/store.hpp>
 
 namespace tinystore {
 
-Store::Store(std::unique_ptr<StoreBackend> backend) : _backend(std::move(backend)) {}
+std::unique_ptr<StoreBackend> Store::make_backend(const StoreOptions &options) {
+    switch (options.backend_type) {
+    case StoreBackendType::InMemory:
+        return std::make_unique<InMemoryBackend>();
+    }
+}
+
+Store::Store(const StoreOptions &options) : _backend(make_backend(options)) {}
+
+Store::Store(std::unique_ptr<StoreBackend> backend) {
+    if (!backend)
+        throw std::invalid_argument("*backend cannot be nullptr");
+    _backend = std::move(backend);
+}
 
 void Store::put(std::string key, std::string value) {
     _backend->put(std::move(key), std::move(value));

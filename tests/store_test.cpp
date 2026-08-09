@@ -4,7 +4,9 @@
 #include <tinystore/store.hpp>
 
 TEST_CASE("a new store does not contain a key") {
-    tinystore::Store store(std::make_unique<tinystore::InMemoryBackend>());
+    tinystore::Store store(tinystore::StoreOptions{
+        .backend_type = tinystore::StoreBackendType::InMemory,
+    });
 
     const auto result = store.get("missing");
 
