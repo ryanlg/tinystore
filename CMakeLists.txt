@@ -8,8 +8,12 @@ project(
 
 add_library(
     tinystore
-    src/store.cpp
     src/backends/inmemory.cpp
+    src/byte_writer.cpp
+    src/record.cpp
+    src/store.cpp
+)
+
 add_compile_options(
     -Wall
     -Wextra
@@ -36,6 +40,8 @@ find_package(Catch2 3 REQUIRED)
 
 add_executable(
     tinystore_tests
+    tests/encoder_test.cpp
+    tests/record_test.cpp
     tests/store_test.cpp
 )
 
