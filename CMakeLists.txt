@@ -10,6 +10,15 @@ add_library(
     tinystore
     src/store.cpp
     src/backends/inmemory.cpp
+add_compile_options(
+    -Wall
+    -Wextra
+    -Wpedantic
+)
+
+# Nix's clang wrapper injects -O2 if hardening is enabled.
+target_compile_options(tinystore PRIVATE
+    "$<$<CONFIG:Debug>:-O0>"
 )
 
 target_compile_features(
@@ -35,6 +44,10 @@ target_link_libraries(
     PRIVATE
         tinystore
         Catch2::Catch2WithMain
+)
+
+target_compile_options(tinystore_tests PRIVATE
+    "$<$<CONFIG:Debug>:-O0>"
 )
 
 enable_testing()
