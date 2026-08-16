@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstring>
 #include <span>
 #include <string>
 #include <type_traits>
@@ -10,20 +11,19 @@ namespace tinystore {
 
 class ByteWriter {
     std::vector<std::byte> _backing;
-    off_t offset;
 
   public:
-    ByteWriter() : offset(0) {};
-    ByteWriter(unsigned int capacity) : _backing(std::vector<std::byte>(capacity)), offset(0) {};
+    ByteWriter() {};
+    ByteWriter(unsigned int capacity) { _backing.reserve(capacity); };
 
     template <typename T>
         requires std::is_fundamental_v<T>
     void write(const T &to_write) {
-        const auto new_size = offset + sizeof(T);
+        const auto old_size = _backing.size();
+        const auto new_size = old_size + sizeof(T);
 
         _backing.resize(new_size);
-        std::memcpy(_backing.data() + offset, &to_write, sizeof(T));
-        offset = new_size;
+        std::memcpy(_backing.data() + old_size, &to_write, sizeof(T));
     }
 
     void write(const std::span<const std::byte>);

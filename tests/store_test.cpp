@@ -1,12 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include <tinystore/backends/inmemory.hpp>
 #include <tinystore/store.hpp>
 
+#include <catch2/catch_test_macros.hpp>
+
 TEST_CASE("a new store does not contain a key") {
-    tinystore::Store store(tinystore::StoreOptions{
-        .backend_type = tinystore::StoreBackendType::InMemory,
-    });
+    tinystore::Store store(tinystore::StoreOptions{tinystore::StoreBackendType::InMemory});
 
     const auto result = store.get("missing");
 

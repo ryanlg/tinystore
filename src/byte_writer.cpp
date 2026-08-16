@@ -4,7 +4,6 @@ namespace tinystore {
 
 void ByteWriter::write(const std::span<const std::byte> span) {
     _backing.insert(_backing.end(), span.begin(), span.end());
-    offset += span.size();
 }
 
 void ByteWriter::write(const std::string &str) {

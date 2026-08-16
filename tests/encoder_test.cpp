@@ -1,12 +1,13 @@
+#include <tinystore/byte_writer.hpp>
+
 #include <cstddef>
+#include <cstring>
 #include <string>
 #include <type_traits>
 #include <vector>
 
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
-
-#include <tinystore/byte_writer.hpp>
 
 template <typename T>
     requires std::is_fundamental_v<T>

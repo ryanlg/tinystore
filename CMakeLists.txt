@@ -14,14 +14,12 @@ add_library(
     src/store.cpp
 )
 
-add_compile_options(
+# Nix's clang wrapper injects -O2 if hardening is enabled.
+target_compile_options(tinystore PRIVATE
     -Wall
     -Wextra
     -Wpedantic
-)
-
-# Nix's clang wrapper injects -O2 if hardening is enabled.
-target_compile_options(tinystore PRIVATE
+    -Werror
     "$<$<CONFIG:Debug>:-O0>"
 )
 
@@ -53,6 +51,9 @@ target_link_libraries(
 )
 
 target_compile_options(tinystore_tests PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
     "$<$<CONFIG:Debug>:-O0>"
 )
 

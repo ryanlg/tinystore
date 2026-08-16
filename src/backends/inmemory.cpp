@@ -1,6 +1,6 @@
-#include <unordered_map>
-
 #include <tinystore/backends/inmemory.hpp>
+
+#include <unordered_map>
 
 namespace tinystore {
 

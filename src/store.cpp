@@ -1,5 +1,6 @@
-#include <tinystore/backends/inmemory.hpp>
 #include <tinystore/store.hpp>
+
+#include <tinystore/backends/inmemory.hpp>
 
 namespace tinystore {
 
@@ -7,7 +8,11 @@ std::unique_ptr<StoreBackend> Store::make_backend(const StoreOptions &options) {
     switch (options.backend_type) {
     case StoreBackendType::InMemory:
         return std::make_unique<InMemoryBackend>();
+    case StoreBackendType::Unspecified:
+        // Fall through
     }
+
+    throw std::invalid_argument("invalid or unsupported backend type");
 }
 
 Store::Store(const StoreOptions &options) : _backend(make_backend(options)) {}

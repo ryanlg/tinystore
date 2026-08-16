@@ -1,12 +1,19 @@
+#include <tinystore/record.hpp>
+
 #include <cstdint>
 #include <iostream>
 #include <utility>
 
 #include <tinystore/byte_writer.hpp>
-#include <tinystore/record.hpp>
 
 namespace tinystore {
 
+// @todo: This is the golden definition of terrible code.
+// - host dependent on size and endianess
+// - no bounds checking
+// - no actual defined layout
+// - layout can also be unaligned due to small fields
+// We will worry about that later. I'm not convinced that this is the way to do it yet.
 std::vector<std::byte> encode_record(const Record &record) {
     unsigned int overall_length = 1   // op
                                   + 4 // key_len
