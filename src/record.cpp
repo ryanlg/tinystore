@@ -2,53 +2,98 @@
 
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <utility>
 
-#include <tinystore/byte_writer.hpp>
+#include <tinystore/byte_codec.hpp>
+#include <tinystore/limits.hpp>
 
 namespace tinystore {
 
-// @todo: This is the golden definition of terrible code.
-// - host dependent on size and endianess
-// - no bounds checking
-// - no actual defined layout
-// - layout can also be unaligned due to small fields
-// We will worry about that later. I'm not convinced that this is the way to do it yet.
-std::vector<std::byte> encode_record(const Record &record) {
-    unsigned int overall_length = 1   // op
-                                  + 4 // key_len
-                                  + 4 // val_len
-                                  + record.key.length() + record.value.length();
+// Record Layout:
+// u8        operation
+// u16       key length      little-endian
+// u32       value length    little-endian
+// variable  key content
+// variable  value content
+//
+// @todo: key/value type?
 
-    ByteWriter bw = {overall_length};
-    bw.write(static_cast<uint8_t>(record.op));
-    // @todo: this is 8 bytes long
-    bw.write(record.key.length());
-    bw.write(record.value.length());
+std::expected<std::vector<std::byte>, EncodeError> encode_record(const Record &record) {
+    if (record.key.length() > limits::max_key_length)
+        return std::unexpected(EncodeError::field_too_long("key"));
+    if (record.value.length() > limits::max_value_length)
+        return std::unexpected(EncodeError::field_too_long("value"));
+
+    const auto key_length = static_cast<uint16_t>(record.key.length());
+    const auto value_length = static_cast<uint32_t>(record.value.length());
+
+    std::size_t overall_length = sizeof(uint8_t)    // op
+                                 + sizeof(uint16_t) // key length
+                                 + sizeof(uint32_t) // val length
+                                 + key_length + value_length;
+
+    // @todo: this check should happen before we add up everything by subtracting from max
+    if (overall_length <= key_length || overall_length <= value_length)
+        return std::unexpected(EncodeError::overflow());
+
+    ByteCodec bw = {overall_length};
+    bw.write_le(static_cast<uint8_t>(record.op));
+    bw.write_le(key_length);
+    bw.write_le(value_length);
     bw.write(record.key);
     bw.write(record.value);
 
-    return bw.finalize();
+    return std::move(bw).finalize();
 }
 
-Record decode_record(const std::vector<std::byte> &bvec) {
+std::expected<Record, DecodeError> decode_record(const std::vector<std::byte> &bvec) {
     Record record = {};
-    const auto data = bvec.data();
-    off_t offset = 0;
+    ByteCodec bc = {std::move(bvec)};
 
-    record.op = static_cast<Operation>(*reinterpret_cast<const uint8_t *>(data));
+    std::size_t offset = 0;
+    {
+        const auto result = bc.read_le<uint8_t>(offset);
+        if (!result)
+            return std::unexpected(result.error());
+        record.op = static_cast<Operation>(*result);
+    }
     offset += sizeof(uint8_t);
 
-    size_t key_len = *reinterpret_cast<const size_t *>(data + offset);
-    offset += sizeof(size_t);
+    uint16_t key_len;
+    {
+        const auto result = bc.read_le<uint16_t>(offset);
+        if (!result)
+            return std::unexpected(result.error());
+        key_len = *result;
+    }
+    offset += sizeof(uint16_t);
 
-    size_t value_len = *reinterpret_cast<const size_t *>(data + offset);
-    offset += sizeof(size_t);
+    uint32_t value_len;
+    {
+        const auto result = bc.read_le<uint32_t>(offset);
+        if (!result)
+            return std::unexpected(result.error());
+        value_len = *result;
+    }
+    offset += sizeof(uint32_t);
 
-    record.key = std::string(reinterpret_cast<const char *>(data + offset), key_len);
+    {
+        const auto result = bc.read_string(offset, key_len);
+        if (!result)
+            return std::unexpected(result.error());
+        record.key = *result;
+    }
     offset += key_len;
 
-    record.value = std::string(reinterpret_cast<const char *>(data + offset), value_len);
+    {
+        const auto result = bc.read_string(offset, value_len);
+        if (!result)
+            return std::unexpected(result.error());
+        record.value = *result;
+    }
+
+    // @todo: trailing bytes check
 
     return record;
 }

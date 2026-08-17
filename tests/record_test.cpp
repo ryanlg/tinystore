@@ -10,8 +10,15 @@ TEST_CASE("Encode and decode a record") {
         .value = "value",
     };
 
-    auto encoded = tinystore::encode_record(rec);
-    auto decoded = tinystore::decode_record(encoded);
+    const auto encode_result = tinystore::encode_record(rec);
+    REQUIRE(encode_result);
+
+    const auto encoded = *encode_result;
+    const auto decode_result = tinystore::decode_record(encoded);
+
+    REQUIRE(decode_result);
+    const auto decoded = *decode_result;
+
     REQUIRE(rec.op == decoded.op);
     REQUIRE(rec.key == decoded.key);
     REQUIRE(rec.value == decoded.value);

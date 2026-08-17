@@ -1,0 +1,2 @@
+- [ ] Define Record layout, since we have decided that Records are serialised independent to the wire format.
+- [ ] ByteWriter -> ByteCodec. We need a reader impl too.

@@ -9,7 +9,7 @@ project(
 add_library(
     tinystore
     src/backends/inmemory.cpp
-    src/byte_writer.cpp
+    src/byte_codec.cpp
     src/record.cpp
     src/store.cpp
 )
@@ -20,6 +20,7 @@ target_compile_options(tinystore PRIVATE
     -Wextra
     -Wpedantic
     -Werror
+    -Wconversion
     "$<$<CONFIG:Debug>:-O0>"
 )
 
@@ -38,7 +39,7 @@ find_package(Catch2 3 REQUIRED)
 
 add_executable(
     tinystore_tests
-    tests/encoder_test.cpp
+    tests/byte_codec_test.cpp
     tests/record_test.cpp
     tests/store_test.cpp
 )
@@ -54,6 +55,8 @@ target_compile_options(tinystore_tests PRIVATE
     -Wall
     -Wextra
     -Wpedantic
+    -Werror
+    -Wconversion
     "$<$<CONFIG:Debug>:-O0>"
 )
 

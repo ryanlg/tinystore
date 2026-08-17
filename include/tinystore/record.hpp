@@ -1,12 +1,15 @@
 #pragma once
 
+#include <tinystore/error.hpp>
+
 #include <cstddef>
+#include <expected>
 #include <string>
 #include <vector>
 
 namespace tinystore {
 
-enum Operation {
+enum class Operation : uint8_t {
     PUT = 1,
     DELETE = 2,
 };
@@ -17,7 +20,10 @@ struct Record {
     std::string value;
 };
 
-std::vector<std::byte> encode_record(const Record &);
-Record decode_record(const std::vector<std::byte> &);
+[[nodiscard]]
+std::expected<std::vector<std::byte>, EncodeError> encode_record(const Record &);
+
+[[nodiscard]]
+std::expected<Record, DecodeError> decode_record(const std::vector<std::byte> &);
 
 } // namespace tinystore
