@@ -6,7 +6,8 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
   };
 
-  outputs = inputs@{ flake-parts, ... }:
+  outputs =
+    inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [
         "aarch64-darwin"
@@ -15,12 +16,15 @@
         "x86_64-linux"
       ];
 
-      perSystem = { pkgs, ... } : {
+      perSystem = { pkgs, ... }: {
+        formatter = pkgs.nixfmt;
+
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             catch2_3
             clang
             cmake
+            just
             lldb
             llvmPackages.clang-tools
             ninja
@@ -45,4 +49,3 @@
       };
     };
 }
-
