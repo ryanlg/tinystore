@@ -6,6 +6,8 @@ project(
     LANGUAGES CXX
 )
 
+# tinystore
+# ---------
 add_library(
     tinystore
     src/backends/inmemory.cpp
@@ -35,6 +37,8 @@ target_include_directories(
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
+# tinystore_tests
+# ---------------
 find_package(Catch2 3 REQUIRED)
 
 add_executable(
@@ -65,4 +69,35 @@ enable_testing()
 add_test(
     NAME tinystore_tests
     COMMAND tinystore_tests
+)
+
+# clang-format
+# ------------
+find_program(CLANG_FORMAT
+    NAMES clang-format
+    REQUIRED
+)
+
+file(GLOB_RECURSE FORMAT_SOURCES
+    CONFIGURE_DEPENDS
+    "${PROJECT_SOURCE_DIR}/src/*.cpp"
+    "${PROJECT_SOURCE_DIR}/src/*.hpp"
+    "${PROJECT_SOURCE_DIR}/include/*.hpp"
+    "${PROJECT_SOURCE_DIR}/tests/*.cpp"
+    "${PROJECT_SOURCE_DIR}/tests/*.hpp"
+)
+
+add_custom_target(format
+    COMMAND ${CLANG_FORMAT} -i ${FORMAT_SOURCES}
+    COMMENT "Formatting C++ sources"
+    VERBATIM
+)
+
+add_custom_target(format-check
+    COMMAND ${CLANG_FORMAT}
+        --dry-run
+        --Werror
+        ${FORMAT_SOURCES}
+    COMMENT "Checking C++ formatting"
+    VERBATIM
 )

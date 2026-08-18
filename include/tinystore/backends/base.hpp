@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include <string>
 #include <optional>
+#include <string>
 
 namespace tinystore {
 
