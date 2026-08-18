@@ -3,11 +3,11 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    flake-parts.url = "github:hercules-ci/flake-parts";
   };
 
-  outputs =
-    { nixpkgs, ... }:
-    let
+  outputs = inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [
         "aarch64-darwin"
         "aarch64-linux"
@@ -15,25 +15,17 @@
         "x86_64-linux"
       ];
 
-      forAllSystems = nixpkgs.lib.genAttrs systems;
-    in
-    {
-      devShells = forAllSystems (
-        system:
-        let
-          pkgs = import nixpkgs { inherit system; };
-        in
-        {
-          default = pkgs.mkShell {
-            packages = with pkgs; [
-              catch2_3
-              clang
-              cmake
-              lldb
-              llvmPackages.clang-tools
-              ninja
-              pkg-config
-            ];
+      perSystem = { pkgs, ... } : {
+        devShells.default = pkgs.mkShell {
+          packages = with pkgs; [
+            catch2_3
+            clang
+            cmake
+            lldb
+            llvmPackages.clang-tools
+            ninja
+            pkg-config
+          ];
 
           # Required for LLDB on macOS (stinky)
           shellHook = pkgs.lib.optionalString pkgs.stdenv.isDarwin ''
@@ -49,9 +41,8 @@
               fi
             fi
           '';
-          };
-        }
-      );
+        };
+      };
     };
 }
 
