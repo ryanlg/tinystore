@@ -8,3 +8,6 @@ lint:
 
 build:
     cmake --build build
+
+test: build
+    ctest --test-dir build --output-on-failure

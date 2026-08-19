@@ -35,63 +35,62 @@ std::expected<std::vector<std::byte>, EncodeError> encode_record(const Record &r
     if (overall_length <= key_length || overall_length <= value_length)
         return std::unexpected(EncodeError::overflow());
 
-    ByteCodec bw = {overall_length};
-    bw.write_le(static_cast<uint8_t>(record.op));
-    bw.write_le(key_length);
-    bw.write_le(value_length);
-    bw.write(record.key);
-    bw.write(record.value);
+    ByteWriter bw = {overall_length};
+    bw.write_u8(static_cast<uint8_t>(record.op));
+    bw.write_u16_le(key_length);
+    bw.write_u32_le(value_length);
+    bw.write_string(record.key);
+    bw.write_string(record.value);
 
     return std::move(bw).finalize();
 }
 
 std::expected<Record, DecodeError> decode_record(const std::vector<std::byte> &bvec) {
     Record record = {};
-    ByteCodec bc = {std::move(bvec)};
+    auto br = ByteReader(std::span(bvec));
 
-    std::size_t offset = 0;
     {
-        const auto result = bc.read_le<uint8_t>(offset);
+        const auto result = br.read_u8();
         if (!result)
             return std::unexpected(result.error());
         record.op = static_cast<Operation>(*result);
+
+        if (record.op >= Operation::NUM_TYPES)
+            return std::unexpected(DecodeError::invalid_value());
     }
-    offset += sizeof(uint8_t);
 
     uint16_t key_len;
     {
-        const auto result = bc.read_le<uint16_t>(offset);
+        const auto result = br.read_u16_le();
         if (!result)
             return std::unexpected(result.error());
         key_len = *result;
     }
-    offset += sizeof(uint16_t);
 
     uint32_t value_len;
     {
-        const auto result = bc.read_le<uint32_t>(offset);
+        const auto result = br.read_u32_le();
         if (!result)
             return std::unexpected(result.error());
         value_len = *result;
     }
-    offset += sizeof(uint32_t);
 
     {
-        const auto result = bc.read_string(offset, key_len);
+        const auto result = br.read_string(key_len);
         if (!result)
             return std::unexpected(result.error());
         record.key = *result;
     }
-    offset += key_len;
 
     {
-        const auto result = bc.read_string(offset, value_len);
+        const auto result = br.read_string(value_len);
         if (!result)
             return std::unexpected(result.error());
         record.value = *result;
     }
 
-    // @todo: trailing bytes check
+    if (const auto result = br.end_consumed())
+        return std::unexpected(*result);
 
     return record;
 }

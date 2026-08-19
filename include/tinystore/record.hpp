@@ -14,6 +14,7 @@ namespace tinystore {
 enum class Operation : uint8_t {
     PUT = 1,
     DELETE = 2,
+    NUM_TYPES,
 };
 
 struct Record {

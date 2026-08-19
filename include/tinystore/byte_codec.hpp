@@ -1,11 +1,10 @@
 #ifndef TINYSTORE_BYTE_CODEC_HPP
 #define TINYSTORE_BYTE_CODEC_HPP
 
-#include <bit>
-#include <concepts>
 #include <cstddef>
-#include <cstring>
+#include <cstdint>
 #include <expected>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -14,65 +13,39 @@
 
 namespace tinystore {
 
-class ByteCodec {
-    std::vector<std::byte> _backing;
-
+class ByteWriter {
   public:
-    ByteCodec() = default;
-    ByteCodec(std::size_t);
-    // @todo: this is terrible. only realized the problem after
-    // I decided to put reading in this class too. need to split this out again.
-    ByteCodec(const std::vector<std::byte> &&);
+    ByteWriter() = default;
+    ByteWriter(std::size_t);
 
-    ~ByteCodec() = default;
+    void write_u8(const uint8_t);
+    void write_u16_le(const uint16_t);
+    void write_u32_le(const uint32_t);
+    void write_string(const std::string &);
+    void write_span(const std::span<const std::byte>);
 
-    // No copying the codec
-    ByteCodec(const ByteCodec &) = delete;
-    ByteCodec &operator=(const ByteCodec &) = delete;
-
-    // But you can move it
-    ByteCodec(ByteCodec &&) noexcept = default;
-    ByteCodec &operator=(ByteCodec &&) noexcept = default;
-
-    // Encode `to_write` as **little endian**; byte swap as needed depending on
-    // native endianess.
-    template <std::integral T> void write_le(const T &to_write) {
-        const auto old_size = _backing.size();
-        const auto new_size = old_size + sizeof(T);
-
-        _backing.resize(new_size);
-
-        auto value = to_write;
-        if constexpr (std::endian::native == std::endian::big)
-            value = std::byteswap(value);
-
-        std::memcpy(_backing.data() + old_size, &value, sizeof(T));
-    }
-
-    void write(const std::span<const std::byte>);
-    void write(const std::string &);
     [[nodiscard]] std::vector<std::byte> finalize() && noexcept;
 
-    // Decode an integral value in the backing store at `offset`, **assuming**
-    // the value is **little endian** in the backing store and byte swap as
-    // needed depending on native endianess.
-    template <std::integral T>
-    [[nodiscard]] std::expected<T, DecodeError> read_le(const std::size_t offset) {
-        if (offset > _backing.size() || _backing.size() - offset < sizeof(T))
-            return std::unexpected(DecodeError::offset_out_of_bounds(offset));
+  private:
+    std::vector<std::byte> _backing;
+};
 
-        T result;
-        std::memcpy(&result, _backing.data() + offset, sizeof(T));
+class ByteReader {
+  public:
+    explicit ByteReader(std::span<const std::byte> given) : _range(given), _pos(0) {}
 
-        if constexpr (std::endian::native == std::endian::big)
-            result = std::byteswap(result);
-
-        return result;
-    }
+    [[nodiscard]] std::expected<uint8_t, DecodeError> read_u8();
+    [[nodiscard]] std::expected<uint16_t, DecodeError> read_u16_le();
+    [[nodiscard]] std::expected<uint32_t, DecodeError> read_u32_le();
 
     [[nodiscard]]
-    std::expected<std::string, DecodeError> read_string(const std::size_t offset,
-                                                        const std::size_t size);
+    std::expected<std::string, DecodeError> read_string(const std::size_t size);
+
+    [[nodiscard]] std::optional<DecodeError> end_consumed();
+
+  private:
+    std::span<const std::byte> _range;
+    std::size_t _pos;
 };
 
 } // namespace tinystore

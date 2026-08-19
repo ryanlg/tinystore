@@ -10,26 +10,55 @@
 namespace tinystore {
 
 enum class DecodeErrorCode : uint8_t {
-    offset_out_of_bounds,
+    invalid_value,
+    unexpected_end,
+    trailing_bytes,
 };
 
 struct DecodeError {
     DecodeErrorCode code;
+    std::size_t available;
     std::size_t offset;
+    std::size_t read_size;
 
     constexpr std::string_view reason() noexcept {
         switch (code) {
-        case DecodeErrorCode::offset_out_of_bounds:
-            return "Given offset is out of bounds";
+        case DecodeErrorCode::unexpected_end:
+            return "Available range is shorted than expected";
+        case DecodeErrorCode::trailing_bytes:
+            return "Unexpected additional data";
+        case DecodeErrorCode::invalid_value:
+            return "Invalid value";
         }
 
         return "unknown error";
     }
 
-    static constexpr DecodeError offset_out_of_bounds(std::size_t offset) {
+    static constexpr DecodeError unexpected_end(std::size_t available, std::size_t offset,
+                                                std::size_t read_size) {
         return DecodeError{
-            .code = DecodeErrorCode::offset_out_of_bounds,
+            .code = DecodeErrorCode::unexpected_end,
+            .available = available,
             .offset = offset,
+            .read_size = read_size,
+        };
+    }
+
+    static constexpr DecodeError trailing_bytes(std::size_t available, std::size_t offset) {
+        return DecodeError{
+            .code = DecodeErrorCode::trailing_bytes,
+            .available = available,
+            .offset = offset,
+            .read_size = 0,
+        };
+    }
+
+    static constexpr DecodeError invalid_value() {
+        return DecodeError{
+            .code = DecodeErrorCode::invalid_value,
+            .available = 0,
+            .offset = 0,
+            .read_size = 0,
         };
     }
 };

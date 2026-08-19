@@ -1,58 +1,99 @@
 #include <tinystore/byte_codec.hpp>
 
-#include <bit>
+#include <array>
 #include <cstddef>
-#include <cstring>
+#include <cstdint>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
-#include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-TEMPLATE_TEST_CASE("single integral types", "[ByteCodec]", char, int, long, uint64_t) {
-    tinystore::ByteCodec bw = {};
-    const TestType num = 3;
+namespace {
 
-    bw.write_le(num);
-    const auto result = bw.read_le<TestType>(0);
-    REQUIRE(result);
-    REQUIRE(*result == num);
+constexpr std::array<std::byte, 12> encoded_values{
+    std::byte{0xAB},                  // u8
+    std::byte{0x34}, std::byte{0x12}, // u16, little-endian
+    std::byte{0xEF}, std::byte{0xCD}, // u32, little-endian
+    std::byte{0xAB}, std::byte{0x89}, std::byte{'A'},
+    std::byte{0x00}, std::byte{'B'},  // string with embedded NUL
+    std::byte{0x00}, std::byte{0xFF}, // raw span
+};
+
+} // namespace
+
+TEST_CASE("ByteWriter emits the specified byte representation", "[ByteWriter]") {
+    tinystore::ByteWriter writer{encoded_values.size()};
+    const std::string string_with_nul{"A\0B", 3};
+    const std::array trailing_bytes{std::byte{0x00}, std::byte{0xFF}};
+
+    writer.write_u8(std::uint8_t{0xAB});
+    writer.write_u16_le(std::uint16_t{0x1234});
+    writer.write_u32_le(std::uint32_t{0x89ABCDEF});
+    writer.write_string(string_with_nul);
+    writer.write_span(trailing_bytes);
+
+    const std::vector<std::byte> expected{encoded_values.begin(), encoded_values.end()};
+    REQUIRE(std::move(writer).finalize() == expected);
 }
 
-TEST_CASE("single string", "[ByteCodec]") {
-    tinystore::ByteCodec bw = {};
-    const std::string str = "test string";
+TEST_CASE("ByteWriter can finalize an empty buffer", "[ByteWriter]") {
+    auto bytes = tinystore::ByteWriter{}.finalize();
 
-    bw.write(str);
-    const auto result = bw.read_string(0, str.length());
-    REQUIRE(result);
-    REQUIRE(*result == str);
+    REQUIRE(bytes.empty());
 }
 
-TEST_CASE("multiple values", "[ByteCodec]") {
-    const std::string str1 = "test string 1";
-    const std::string str2 = "str test 2";
-    const uint64_t l = 10203040;
-    const int i = 42;
-    const char c = 'b';
+TEST_CASE("ByteReader decodes sequential values and detects the end", "[ByteReader]") {
+    tinystore::ByteReader reader{encoded_values};
 
-    tinystore::ByteCodec bw = {};
-    bw.write(str1);
-    bw.write(str2);
-    bw.write_le(l);
-    bw.write_le(i);
-    bw.write_le(c);
+    REQUIRE(reader.read_u8() == std::uint8_t{0xAB});
+    REQUIRE(reader.read_u16_le() == std::uint16_t{0x1234});
+    REQUIRE(reader.read_u32_le() == std::uint32_t{0x89ABCDEF});
+    REQUIRE(reader.read_string(3) == std::string{"A\0B", 3});
+    REQUIRE(reader.read_u8() == std::uint8_t{0x00});
+    REQUIRE(reader.read_u8() == std::uint8_t{0xFF});
 
-    std::size_t offset = 0;
-    REQUIRE(bw.read_string(offset, str1.length()) == str1);
-    offset += str1.length();
-    REQUIRE(bw.read_string(offset, str2.length()) == str2);
-    offset += str2.length();
-    REQUIRE(bw.read_le<uint64_t>(offset) == l);
-    offset += sizeof(uint64_t);
-    REQUIRE(bw.read_le<int>(offset) == i);
-    offset += sizeof(int);
-    REQUIRE(bw.read_le<char>(offset) == c);
+    const auto past_end = reader.read_u8();
+    REQUIRE_FALSE(past_end);
+    REQUIRE(past_end.error().code == tinystore::DecodeErrorCode::unexpected_end);
+    REQUIRE(past_end.error().offset == encoded_values.size());
+}
+
+TEST_CASE("ByteReader does not consume input when a read fails", "[ByteReader]") {
+    constexpr std::array bytes{std::byte{0x2A}};
+    tinystore::ByteReader reader{bytes};
+
+    const auto too_wide = reader.read_u16_le();
+    REQUIRE_FALSE(too_wide);
+    REQUIRE(too_wide.error().code == tinystore::DecodeErrorCode::unexpected_end);
+    REQUIRE(too_wide.error().offset == 0);
+
+    REQUIRE(reader.read_u8() == std::uint8_t{0x2A});
+}
+
+TEST_CASE("ByteReader checks string bounds and accepts an empty string", "[ByteReader]") {
+    constexpr std::array bytes{std::byte{'o'}, std::byte{'k'}};
+    tinystore::ByteReader reader{bytes};
+
+    const auto too_long = reader.read_string(3);
+    REQUIRE_FALSE(too_long);
+    REQUIRE(too_long.error().code == tinystore::DecodeErrorCode::unexpected_end);
+    REQUIRE(too_long.error().offset == 0);
+
+    REQUIRE(reader.read_string(2) == "ok");
+    REQUIRE(reader.read_string(0) == "");
+}
+
+TEST_CASE("ByteReader checks for trailing bytes", "[ByteReader]") {
+    constexpr std::array bytes{std::byte{'1'}, std::byte{'2'}};
+    tinystore::ByteReader reader{bytes};
+
+    const auto s1 = reader.read_string(1);
+    REQUIRE(s1);
+
+    const auto trailing = reader.end_consumed();
+    REQUIRE(trailing);
+    REQUIRE(trailing->code == tinystore::DecodeErrorCode::trailing_bytes);
+    REQUIRE(trailing->available == 2);
+    REQUIRE(trailing->offset == 1);
 }

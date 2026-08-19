@@ -1,27 +1,110 @@
 #include <tinystore/byte_codec.hpp>
 
+#include <bit>
+#include <concepts>
+#include <cstring>
+
 namespace tinystore {
 
-ByteCodec::ByteCodec(std::size_t capacity) { _backing.reserve(capacity); };
-ByteCodec::ByteCodec(const std::vector<std::byte> &&given) : _backing(std::move(given)) {};
+// Encode `to_write` as **little endian**; byte swap as needed depending on
+// native endianess.
+template <std::integral T> void write_integral_le(std::vector<std::byte> &bvec, const T to_write) {
+    const auto old_size = bvec.size();
+    const auto new_size = old_size + sizeof(T);
 
-void ByteCodec::write(const std::span<const std::byte> span) {
+    bvec.resize(new_size);
+
+    auto value = to_write;
+    if constexpr (std::endian::native == std::endian::big)
+        value = std::byteswap(value);
+
+    std::memcpy(bvec.data() + old_size, &value, sizeof(T));
+}
+
+ByteWriter::ByteWriter(std::size_t capacity) { _backing.reserve(capacity); };
+
+void ByteWriter::write_span(const std::span<const std::byte> span) {
     _backing.insert(_backing.end(), span.begin(), span.end());
 }
 
-void ByteCodec::write(const std::string &str) {
-    write(std::as_bytes(std::span<const char>{str.cbegin(), str.cend()}));
+void ByteWriter::write_string(const std::string &str) {
+    write_span(std::as_bytes(std::span<const char>{str.cbegin(), str.cend()}));
 }
 
-std::vector<std::byte> ByteCodec::finalize() && noexcept { return std::move(_backing); }
+void ByteWriter::write_u8(uint8_t given) { write_integral_le<uint8_t>(_backing, given); }
+
+void ByteWriter::write_u16_le(uint16_t given) { write_integral_le<uint16_t>(_backing, given); }
+
+void ByteWriter::write_u32_le(uint32_t given) { write_integral_le<uint32_t>(_backing, given); }
+
+std::vector<std::byte> ByteWriter::finalize() && noexcept { return std::move(_backing); }
 
 [[nodiscard]]
-std::expected<std::string, DecodeError> ByteCodec::read_string(const std::size_t offset,
-                                                               const std::size_t size) {
-    if (offset > _backing.size() || _backing.size() - offset < size)
-        return std::unexpected(DecodeError::offset_out_of_bounds(offset));
+std::optional<DecodeError> check_offset_bounds(const std::size_t available,
+                                               const std::size_t offset,
+                                               const std::size_t read_size) {
+    if (offset > available || available - offset < read_size)
+        return DecodeError::unexpected_end(available, offset, read_size);
 
-    return std::string(reinterpret_cast<const char *>(_backing.data() + offset), size);
+    return std::nullopt;
+}
+
+// Decode an integral value in the backing store at `offset`, **assuming**
+// the value is **little endian** in the backing store and byte swap as
+// needed depending on native endianess.
+template <std::integral T>
+[[nodiscard]] std::expected<T, DecodeError> read_le(std::span<const std::byte> bspan,
+                                                    const std::size_t offset) {
+    auto check = check_offset_bounds(bspan.size(), offset, sizeof(T));
+    if (check)
+        return std::unexpected(*check);
+
+    T result;
+    std::memcpy(&result, bspan.data() + offset, sizeof(T));
+
+    if constexpr (std::endian::native == std::endian::big)
+        result = std::byteswap(result);
+
+    return result;
+}
+
+[[nodiscard]] std::expected<uint8_t, DecodeError> ByteReader::read_u8() {
+    auto result = read_le<uint8_t>(_range, _pos);
+    if (result)
+        _pos += sizeof(uint8_t);
+    return result;
+}
+
+[[nodiscard]] std::expected<uint16_t, DecodeError> ByteReader::read_u16_le() {
+    auto result = read_le<uint16_t>(_range, _pos);
+    if (result)
+        _pos += sizeof(uint16_t);
+    return result;
+}
+
+[[nodiscard]] std::expected<uint32_t, DecodeError> ByteReader::read_u32_le() {
+    auto result = read_le<uint32_t>(_range, _pos);
+    if (result)
+        _pos += sizeof(uint32_t);
+    return result;
+}
+
+[[nodiscard]]
+std::expected<std::string, DecodeError> ByteReader::read_string(const std::size_t size) {
+    auto check = check_offset_bounds(_range.size(), _pos, size);
+    if (check)
+        return std::unexpected(*check);
+
+    auto result = std::string(reinterpret_cast<const char *>(_range.data() + _pos), size);
+    _pos += size;
+    return result;
+}
+
+[[nodiscard]] std::optional<DecodeError> ByteReader::end_consumed() {
+    if (_pos != _range.size())
+        return DecodeError::trailing_bytes(_range.size(), _pos);
+
+    return std::nullopt;
 }
 
 } // namespace tinystore
