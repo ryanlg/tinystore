@@ -1,8 +1,10 @@
-#pragma once
+#ifndef TINYSTORE_RECORD_HPP
+#define TINYSTORE_RECORD_HPP
 
 #include <tinystore/error.hpp>
 
 #include <cstddef>
+#include <cstdint>
 #include <expected>
 #include <string>
 #include <vector>
@@ -27,3 +29,5 @@ std::expected<std::vector<std::byte>, EncodeError> encode_record(const Record &)
 std::expected<Record, DecodeError> decode_record(const std::vector<std::byte> &);
 
 } // namespace tinystore
+
+#endif // TINYSTORE_RECORD_HPP

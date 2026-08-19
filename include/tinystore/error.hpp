@@ -1,8 +1,11 @@
-#pragma once
+#ifndef TINYSTORE_ERROR_HPP
+#define TINYSTORE_ERROR_HPP
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <string_view>
+#include <utility>
 
 namespace tinystore {
 
@@ -67,3 +70,5 @@ struct EncodeError {
 };
 
 } // namespace tinystore
+
+#endif // TINYSTORE_ERROR_HPP

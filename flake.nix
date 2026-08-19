@@ -22,13 +22,23 @@
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             catch2_3
-            clang
+            # clang package by default includes the extra tools (e.g. clang-tidy),
+            # but they are not wrapped like `llvmPackages.clang-tools`, which means
+            # they don't have access to the library path that the Nix wrapper injects.
+            # Disable them here so that we can rely on the other package. This however
+            # make clang a build cache miss.
+            (clang.override {
+              cc = llvmPackages.clang-unwrapped.override {
+                enableClangToolsExtra = false;
+              };
+            })
             cmake
             just
             lldb
             llvmPackages.clang-tools
             ninja
             pkg-config
+            python313 # Needed by run-clang-tidy
           ];
 
           # Required for LLDB on macOS (stinky)

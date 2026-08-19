@@ -5,6 +5,7 @@ project(
     VERSION 0.1.0
     LANGUAGES CXX
 )
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # tinystore
 # ---------
@@ -101,3 +102,44 @@ add_custom_target(format-check
     COMMENT "Checking C++ formatting"
     VERBATIM
 )
+
+# clang-tidy
+# ----------
+find_program(CLANG_TIDY_EXE
+    NAMES clang-tidy
+    REQUIRED
+)
+
+file(GLOB_RECURSE TIDY_SOURCES
+    CONFIGURE_DEPENDS
+    "${PROJECT_SOURCE_DIR}/src/*.cpp"
+    "${PROJECT_SOURCE_DIR}/src/*.hpp"
+)
+
+file(GLOB_RECURSE TIDY_HEADERS
+    CONFIGURE_DEPENDS
+    "${PROJECT_SOURCE_DIR}/include/*.hpp"
+)
+
+add_custom_target(tidy-sources
+    COMMAND
+        "${CLANG_TIDY_EXE}"
+        -p "${CMAKE_BINARY_DIR}"
+        ${TIDY_SOURCES}
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    COMMENT "Running clang-tidy on sources"
+    VERBATIM
+)
+
+add_custom_target(tidy-headers
+    COMMAND
+        "${CLANG_TIDY_EXE}"
+        -p "${CMAKE_BINARY_DIR}"
+        ${TIDY_HEADERS}
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    COMMENT "Running clang-tidy on headers"
+    VERBATIM
+)
+
+add_custom_target(tidy)
+add_dependencies(tidy tidy-sources tidy-headers)

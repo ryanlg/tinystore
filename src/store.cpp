@@ -1,6 +1,11 @@
 #include <tinystore/store.hpp>
 
+#include <stdexcept>
+#include <string>
+#include <utility>
+
 #include <tinystore/backends/inmemory.hpp>
+#include <tinystore/options.hpp>
 
 namespace tinystore {
 

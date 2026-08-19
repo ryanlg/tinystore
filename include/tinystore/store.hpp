@@ -4,7 +4,8 @@
 /// a `StoreBackend`, which is responsible for actually executing the read/write
 /// commands.
 
-#pragma once
+#ifndef TINYSTORE_STORE_HPP
+#define TINYSTORE_STORE_HPP
 
 #include <memory>
 #include <optional>
@@ -34,3 +35,5 @@ class Store {
 };
 
 } // namespace tinystore
+
+#endif // TINYSTORE_SOTRE_HPP

@@ -1,0 +1,24 @@
+Checks: >
+  -*,
+  bugprone-*,
+  clang-analyzer-*,
+  concurrency-*,
+  performance-*,
+  portability-*,
+  misc-include-cleaner,
+  misc-header-include-cycle,
+  readability-container-size-empty,
+  readability-duplicate-include,
+  readability-redundant-*,
+  readability-simplify-boolean-expr,
+  modernize-use-equals-default,
+  modernize-use-equals-delete,
+  modernize-use-nullptr,
+  modernize-use-override,
+  modernize-use-using,
+  modernize-use-nodiscard
+
+FormatStyle: file
+
+CheckOptions:
+  misc-include-cleaner.MissingIncludes: false

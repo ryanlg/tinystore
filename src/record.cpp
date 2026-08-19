@@ -1,8 +1,6 @@
 #include <tinystore/record.hpp>
 
 #include <cstdint>
-#include <iostream>
-#include <limits>
 #include <utility>
 
 #include <tinystore/byte_codec.hpp>

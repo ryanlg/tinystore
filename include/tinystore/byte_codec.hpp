@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TINYSTORE_BYTE_CODEC_HPP
+#define TINYSTORE_BYTE_CODEC_HPP
 
 #include <bit>
 #include <concepts>
@@ -17,7 +18,7 @@ class ByteCodec {
     std::vector<std::byte> _backing;
 
   public:
-    ByteCodec() {};
+    ByteCodec() = default;
     ByteCodec(std::size_t);
     // @todo: this is terrible. only realized the problem after
     // I decided to put reading in this class too. need to split this out again.
@@ -75,3 +76,5 @@ class ByteCodec {
 };
 
 } // namespace tinystore
+
+#endif // TINYSTORE_BYTE_CODEC_HPP

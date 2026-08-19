@@ -3,7 +3,8 @@
 /// This is the base interface for store backends, which executes commands
 /// when received from `Store`.
 
-#pragma once
+#ifndef TINYSTORE_BACKENDS_BASE_HPP
+#define TINYSTORE_BACKENDS_BASE_HPP
 
 #include <optional>
 #include <string>
@@ -21,3 +22,5 @@ class StoreBackend {
 };
 
 } // namespace tinystore
+
+#endif // TINYSTORE_BACKENDS_BASE_HPP

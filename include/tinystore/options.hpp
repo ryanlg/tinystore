@@ -1,8 +1,11 @@
-#pragma once
+#ifndef TINYSTORE_OPTIONS_HPP
+#define TINYSTORE_OPTIONS_HPP
+
+#include <cstdint>
 
 namespace tinystore {
 
-enum StoreBackendType {
+enum class StoreBackendType : uint8_t {
     Unspecified = 0,
     InMemory,
 };
@@ -15,3 +18,5 @@ struct StoreOptions {
 };
 
 } // namespace tinystore
+
+#endif // TINYSTORE_OPTIONS_HPP
