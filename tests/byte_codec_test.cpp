@@ -55,8 +55,12 @@ TEST_CASE("ByteReader decodes sequential values and detects the end", "[ByteRead
 
     const auto past_end = reader.read_u8();
     REQUIRE_FALSE(past_end);
-    REQUIRE(past_end.error().code == tinystore::DecodeErrorCode::unexpected_end);
-    REQUIRE(past_end.error().offset == encoded_values.size());
+
+    const auto error = past_end.error();
+    REQUIRE(std::holds_alternative<tinystore::DecodeError::UnexpectedEnd>(error.detail()));
+
+    const auto detail = std::get<tinystore::DecodeError::UnexpectedEnd>(error.detail());
+    REQUIRE(detail.offset == encoded_values.size());
 }
 
 TEST_CASE("ByteReader does not consume input when a read fails", "[ByteReader]") {
@@ -65,8 +69,12 @@ TEST_CASE("ByteReader does not consume input when a read fails", "[ByteReader]")
 
     const auto too_wide = reader.read_u16_le();
     REQUIRE_FALSE(too_wide);
-    REQUIRE(too_wide.error().code == tinystore::DecodeErrorCode::unexpected_end);
-    REQUIRE(too_wide.error().offset == 0);
+
+    const auto error = too_wide.error();
+    REQUIRE(std::holds_alternative<tinystore::DecodeError::UnexpectedEnd>(error.detail()));
+
+    const auto detail = std::get<tinystore::DecodeError::UnexpectedEnd>(error.detail());
+    REQUIRE(detail.offset == 0);
 
     REQUIRE(reader.read_u8() == std::uint8_t{0x2A});
 }
@@ -77,8 +85,12 @@ TEST_CASE("ByteReader checks string bounds and accepts an empty string", "[ByteR
 
     const auto too_long = reader.read_string(3);
     REQUIRE_FALSE(too_long);
-    REQUIRE(too_long.error().code == tinystore::DecodeErrorCode::unexpected_end);
-    REQUIRE(too_long.error().offset == 0);
+
+    const auto error = too_long.error();
+    REQUIRE(std::holds_alternative<tinystore::DecodeError::UnexpectedEnd>(error.detail()));
+
+    const auto detail = std::get<tinystore::DecodeError::UnexpectedEnd>(error.detail());
+    REQUIRE(detail.offset == 0);
 
     REQUIRE(reader.read_string(2) == "ok");
     REQUIRE(reader.read_string(0) == "");
@@ -92,8 +104,12 @@ TEST_CASE("ByteReader checks for trailing bytes", "[ByteReader]") {
     REQUIRE(s1);
 
     const auto trailing = reader.end_consumed();
-    REQUIRE(trailing);
-    REQUIRE(trailing->code == tinystore::DecodeErrorCode::trailing_bytes);
-    REQUIRE(trailing->available == 2);
-    REQUIRE(trailing->offset == 1);
+    REQUIRE_FALSE(trailing);
+
+    const auto error = trailing.error();
+    REQUIRE(std::holds_alternative<tinystore::DecodeError::TrailingBytes>(error.detail()));
+
+    const auto detail = std::get<tinystore::DecodeError::TrailingBytes>(error.detail());
+    REQUIRE(detail.available == 2);
+    REQUIRE(detail.end == 1);
 }

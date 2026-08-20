@@ -67,9 +67,10 @@ TEST_CASE("Record decoding rejects every truncated prefix", "[Record]") {
         const std::vector<std::byte> prefix{prefix_span.begin(), prefix_span.end()};
 
         const auto result = tinystore::decode_record(prefix);
-
         REQUIRE_FALSE(result);
-        REQUIRE(result.error().code == tinystore::DecodeErrorCode::unexpected_end);
+
+        const auto error = result.error();
+        REQUIRE(std::holds_alternative<tinystore::DecodeError::UnexpectedEnd>(error.detail()));
     }
 }
 
@@ -79,11 +80,14 @@ TEST_CASE("Record decoding rejects malformed input", "[Record]") {
         bytes.push_back(std::byte{0xFF});
 
         const auto result = tinystore::decode_record(bytes);
-
         REQUIRE_FALSE(result);
-        REQUIRE(result.error().code == tinystore::DecodeErrorCode::trailing_bytes);
-        REQUIRE(result.error().available == bytes.size());
-        REQUIRE(result.error().offset == encoded_record.size());
+
+        const auto error = result.error();
+        REQUIRE(std::holds_alternative<tinystore::DecodeError::TrailingBytes>(error.detail()));
+
+        const auto detail = std::get<tinystore::DecodeError::TrailingBytes>(error.detail());
+        REQUIRE(detail.available == bytes.size());
+        REQUIRE(detail.end == encoded_record.size());
     }
 
     SECTION("unknown operation") {
@@ -100,12 +104,15 @@ TEST_CASE("Record decoding rejects malformed input", "[Record]") {
         };
 
         const auto result = tinystore::decode_record(bytes);
-
         REQUIRE_FALSE(result);
-        REQUIRE(result.error().code == tinystore::DecodeErrorCode::unexpected_end);
-        REQUIRE(result.error().available == bytes.size());
-        REQUIRE(result.error().offset == bytes.size());
-        REQUIRE(result.error().read_size == tinystore::limits::max_value_length);
+
+        const auto error = result.error();
+        REQUIRE(std::holds_alternative<tinystore::DecodeError::UnexpectedEnd>(error.detail()));
+
+        const auto detail = std::get<tinystore::DecodeError::UnexpectedEnd>(error.detail());
+        REQUIRE(detail.available == bytes.size());
+        REQUIRE(detail.offset == bytes.size());
+        REQUIRE(detail.read_size == tinystore::limits::max_value_length);
     }
 }
 
@@ -120,8 +127,11 @@ TEST_CASE("Record encoding enforces the key length limit", "[Record]") {
 
     record.key.push_back('k');
     const auto result = tinystore::encode_record(record);
-
     REQUIRE_FALSE(result);
-    REQUIRE(result.error().code == tinystore::EncodeErrorCode::field_too_long);
-    REQUIRE(result.error().field_name == "key");
+
+    const auto error = result.error();
+    REQUIRE(std::holds_alternative<tinystore::EncodeError::FieldTooLong>(error.detail()));
+
+    const auto detail = std::get<tinystore::EncodeError::FieldTooLong>(error.detail());
+    REQUIRE(detail.field_name == "key");
 }

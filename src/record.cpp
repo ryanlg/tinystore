@@ -19,9 +19,15 @@ namespace tinystore {
 
 std::expected<std::vector<std::byte>, EncodeError> encode_record(const Record &record) {
     if (record.key.length() > limits::max_key_length)
-        return std::unexpected(EncodeError::field_too_long("key"));
+        return std::unexpected(
+            EncodeError{EncodeError::FieldTooLong{.field_name = "key",
+                                                  .input_length = record.key.length(),
+                                                  .max_length = limits::max_key_length}});
     if (record.value.length() > limits::max_value_length)
-        return std::unexpected(EncodeError::field_too_long("value"));
+        return std::unexpected(
+            EncodeError{EncodeError::FieldTooLong{.field_name = "value",
+                                                  .input_length = record.value.length(),
+                                                  .max_length = limits::max_value_length}});
 
     const auto key_length = static_cast<uint16_t>(record.key.length());
     const auto value_length = static_cast<uint32_t>(record.value.length());
@@ -33,7 +39,7 @@ std::expected<std::vector<std::byte>, EncodeError> encode_record(const Record &r
 
     // @todo: this check should happen before we add up everything by subtracting from max
     if (overall_length <= key_length || overall_length <= value_length)
-        return std::unexpected(EncodeError::overflow());
+        return std::unexpected(EncodeError{EncodeError::Overflow()});
 
     ByteWriter bw = {overall_length};
     bw.write_u8(static_cast<uint8_t>(record.op));
@@ -56,7 +62,9 @@ std::expected<Record, DecodeError> decode_record(const std::vector<std::byte> &b
         record.op = static_cast<Operation>(*result);
 
         if (record.op >= Operation::NUM_TYPES)
-            return std::unexpected(DecodeError::invalid_value());
+            return std::unexpected(DecodeError{DecodeError::InvalidValue{
+                .field_name = "op",
+            }});
     }
 
     uint16_t key_len;
@@ -89,8 +97,9 @@ std::expected<Record, DecodeError> decode_record(const std::vector<std::byte> &b
         record.value = *result;
     }
 
-    if (const auto result = br.end_consumed())
-        return std::unexpected(*result);
+    const auto result = br.end_consumed();
+    if (!result)
+        return std::unexpected(result.error());
 
     return record;
 }

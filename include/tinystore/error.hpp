@@ -3,64 +3,63 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <string>
 #include <string_view>
-#include <utility>
+#include <variant>
 
 namespace tinystore {
 
-enum class DecodeErrorCode : uint8_t {
-    invalid_value,
-    unexpected_end,
-    trailing_bytes,
-};
+class DecodeError {
+  public:
+    struct InvalidValue {
+        std::string_view field_name;
 
-struct DecodeError {
-    DecodeErrorCode code;
-    std::size_t available;
-    std::size_t offset;
-    std::size_t read_size;
-
-    constexpr std::string_view reason() noexcept {
-        switch (code) {
-        case DecodeErrorCode::unexpected_end:
-            return "Available range is shorted than expected";
-        case DecodeErrorCode::trailing_bytes:
-            return "Unexpected additional data";
-        case DecodeErrorCode::invalid_value:
-            return "Invalid value";
+        [[nodiscard]]
+        constexpr std::string_view describe() const noexcept {
+            return "Field decodes to invalid value";
         }
+    };
 
-        return "unknown error";
+    struct UnexpectedEnd {
+        std::size_t available;
+        std::size_t offset;
+        std::size_t read_size;
+
+        [[nodiscard]]
+        constexpr std::string_view describe() const noexcept {
+            return "Available input is shorted than expected";
+        }
+    };
+
+    struct TrailingBytes {
+        std::size_t available;
+        std::size_t end;
+
+        [[nodiscard]]
+        constexpr std::string_view describe() const noexcept {
+            return "Unexpected additional data at the end of input";
+        }
+    };
+
+    using Detail = std::variant<InvalidValue, UnexpectedEnd, TrailingBytes>;
+
+    // Explicitly allow implicit conversion
+    template <class T> DecodeError(const T &detail) : _detail(detail) {}
+
+    [[nodiscard]]
+    constexpr std::string_view describe() const {
+        // @todo: this method can't be marked as noexcept because the variant might
+        // be valueless_by_exception and visit() would throw.
+        return std::visit([](const auto &detail) -> std::string_view { return detail.describe(); },
+                          _detail);
     }
 
-    static constexpr DecodeError unexpected_end(std::size_t available, std::size_t offset,
-                                                std::size_t read_size) {
-        return DecodeError{
-            .code = DecodeErrorCode::unexpected_end,
-            .available = available,
-            .offset = offset,
-            .read_size = read_size,
-        };
+    [[nodiscard]]
+    const Detail &detail() const noexcept {
+        return _detail;
     }
 
-    static constexpr DecodeError trailing_bytes(std::size_t available, std::size_t offset) {
-        return DecodeError{
-            .code = DecodeErrorCode::trailing_bytes,
-            .available = available,
-            .offset = offset,
-            .read_size = 0,
-        };
-    }
-
-    static constexpr DecodeError invalid_value() {
-        return DecodeError{
-            .code = DecodeErrorCode::invalid_value,
-            .available = 0,
-            .offset = 0,
-            .read_size = 0,
-        };
-    }
+  private:
+    Detail _detail;
 };
 
 enum class EncodeErrorCode : uint8_t {
@@ -68,34 +67,43 @@ enum class EncodeErrorCode : uint8_t {
     overflow,
 };
 
-struct EncodeError {
-    EncodeErrorCode code;
-    std::string field_name;
+class EncodeError {
+  public:
+    struct FieldTooLong {
+        std::string_view field_name;
+        std::size_t input_length;
+        std::size_t max_length;
 
-    constexpr std::string_view reason() noexcept {
-        switch (code) {
-        case EncodeErrorCode::field_too_long:
+        [[nodiscard]]
+        constexpr std::string_view describe() const noexcept {
             return "Field length exceeds specification";
-        case EncodeErrorCode::overflow:
+        }
+    };
+
+    struct Overflow {
+        [[nodiscard]]
+        constexpr std::string_view describe() const noexcept {
             return "Encodee length exceeds machine capacity";
         }
+    };
 
-        return "unknown error";
+    using Detail = std::variant<FieldTooLong, Overflow>;
+
+    template <class T> EncodeError(const T &detail) : _detail(detail) {}
+
+    [[nodiscard]]
+    constexpr std::string_view describe() const {
+        return std::visit([](const auto &detail) -> std::string_view { return detail.describe(); },
+                          _detail);
     }
 
-    static constexpr EncodeError field_too_long(std::string &&field_name) {
-        return EncodeError{
-            .code = EncodeErrorCode::field_too_long,
-            .field_name = std::move(field_name),
-        };
+    [[nodiscard]]
+    const Detail &detail() const noexcept {
+        return _detail;
     }
 
-    static constexpr EncodeError overflow() {
-        return EncodeError{
-            .code = EncodeErrorCode::overflow,
-            .field_name = "",
-        };
-    }
+  private:
+    Detail _detail;
 };
 
 } // namespace tinystore

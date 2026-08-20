@@ -40,13 +40,13 @@ void ByteWriter::write_u32_le(uint32_t given) { write_integral_le<uint32_t>(_bac
 std::vector<std::byte> ByteWriter::finalize() && noexcept { return std::move(_backing); }
 
 [[nodiscard]]
-std::optional<DecodeError> check_offset_bounds(const std::size_t available,
-                                               const std::size_t offset,
-                                               const std::size_t read_size) {
+std::expected<void, DecodeError> check_offset_bounds(const std::size_t available,
+                                                     const std::size_t offset,
+                                                     const std::size_t read_size) {
     if (offset > available || available - offset < read_size)
-        return DecodeError::unexpected_end(available, offset, read_size);
+        return std::unexpected(DecodeError::UnexpectedEnd(available, offset, read_size));
 
-    return std::nullopt;
+    return {};
 }
 
 // Decode an integral value in the backing store at `offset`, **assuming**
@@ -56,8 +56,8 @@ template <std::integral T>
 [[nodiscard]] std::expected<T, DecodeError> read_le(std::span<const std::byte> bspan,
                                                     const std::size_t offset) {
     auto check = check_offset_bounds(bspan.size(), offset, sizeof(T));
-    if (check)
-        return std::unexpected(*check);
+    if (!check)
+        return std::unexpected(check.error());
 
     T result;
     std::memcpy(&result, bspan.data() + offset, sizeof(T));
@@ -92,19 +92,19 @@ template <std::integral T>
 [[nodiscard]]
 std::expected<std::string, DecodeError> ByteReader::read_string(const std::size_t size) {
     auto check = check_offset_bounds(_range.size(), _pos, size);
-    if (check)
-        return std::unexpected(*check);
+    if (!check)
+        return std::unexpected(check.error());
 
     auto result = std::string(reinterpret_cast<const char *>(_range.data() + _pos), size);
     _pos += size;
     return result;
 }
 
-[[nodiscard]] std::optional<DecodeError> ByteReader::end_consumed() {
+[[nodiscard]] std::expected<void, DecodeError> ByteReader::end_consumed() {
     if (_pos != _range.size())
-        return DecodeError::trailing_bytes(_range.size(), _pos);
+        return std::unexpected(DecodeError::TrailingBytes{.available = _range.size(), .end = _pos});
 
-    return std::nullopt;
+    return {};
 }
 
 } // namespace tinystore

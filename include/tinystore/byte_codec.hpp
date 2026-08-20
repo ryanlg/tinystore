@@ -4,7 +4,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <expected>
-#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -41,7 +40,7 @@ class ByteReader {
     [[nodiscard]]
     std::expected<std::string, DecodeError> read_string(const std::size_t size);
 
-    [[nodiscard]] std::optional<DecodeError> end_consumed();
+    [[nodiscard]] std::expected<void, DecodeError> end_consumed();
 
   private:
     std::span<const std::byte> _range;
