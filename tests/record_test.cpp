@@ -12,15 +12,42 @@
 
 namespace {
 
+// clang-format off
 constexpr std::array<std::byte, 11> encoded_record{
     std::byte{0x01},                  // PUT
     std::byte{0x03}, std::byte{0x00}, // key length
-    std::byte{0x01}, std::byte{0x00}, // value length
-    std::byte{0x00}, std::byte{0x00}, std::byte{'k'}, std::byte{0x00}, std::byte{'y'}, // key
-    std::byte{'v'},                                                                    // value
+    std::byte{0x01}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00}, // value length
+    std::byte{'k'}, std::byte{0x00}, std::byte{'y'}, // key
+    std::byte{'v'},                                  // value
 };
 
 std::vector<std::byte> record_bytes() { return {encoded_record.begin(), encoded_record.end()}; }
+
+constexpr std::array<std::byte, 35> encoded_batch{
+    // LSN
+    std::byte{0xFF}, std::byte{0x88}, std::byte{0x34}, std::byte{0x00},
+    std::byte{0xDE}, std::byte{0xAD}, std::byte{0xBE}, std::byte{0xEF},
+
+    // number_of_records
+    std::byte{0x02}, std::byte{0x00},
+
+    // Record 1
+    std::byte{0x01},                  // PUT
+    std::byte{0x03}, std::byte{0x00}, // key length
+    std::byte{0x01}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00}, // value length
+    std::byte{'k'}, std::byte{0x00}, std::byte{'y'}, // key
+    std::byte{'v'},                                  // value
+
+    // Record 2
+    std::byte{0x01},                  // PUT
+    std::byte{0x02}, std::byte{0x00}, // key length
+    std::byte{0x05}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00},  // value length
+    std::byte{'1'}, std::byte{'2'},                                                    // key
+    std::byte{'v'}, std::byte{'a'}, std::byte{'l'}, std::byte{'u'}, std::byte{'e'},    // value
+};
+
+std::vector<std::byte> batch_bytes() { return {encoded_batch.begin(), encoded_batch.end()}; }
+// clang-format on
 
 } // namespace
 
@@ -134,4 +161,27 @@ TEST_CASE("Record encoding enforces the key length limit", "[Record]") {
 
     const auto detail = std::get<tinystore::EncodeError::FieldTooLong>(error.detail());
     REQUIRE(detail.field_name == "key");
+}
+
+TEST_CASE("LogBatch encoding matches the specified byte layout", "[LogBatch]") {
+    tinystore::Record record1{
+        .op = tinystore::Operation::PUT,
+        .key = std::string{"k\0y", 3},
+        .value = "v",
+    };
+    tinystore::Record record2{
+        .op = tinystore::Operation::PUT,
+        .key = "12",
+        .value = "value",
+    };
+    const uint64_t lsn = 0xEFBEADDE003488FF;
+
+    tinystore::LogBatch lb(lsn);
+    lb.append(std::move(record1));
+    lb.append(std::move(record2));
+
+    const auto result = tinystore::encode_batch(lb);
+
+    REQUIRE(result);
+    REQUIRE(*result == batch_bytes());
 }

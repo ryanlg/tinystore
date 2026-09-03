@@ -37,6 +37,8 @@ void ByteWriter::write_u16_le(uint16_t given) { write_integral_le<uint16_t>(_bac
 
 void ByteWriter::write_u32_le(uint32_t given) { write_integral_le<uint32_t>(_backing, given); }
 
+void ByteWriter::write_u64_le(uint64_t given) { write_integral_le<uint64_t>(_backing, given); }
+
 std::vector<std::byte> ByteWriter::finalize() && noexcept { return std::move(_backing); }
 
 [[nodiscard]]
@@ -68,26 +70,31 @@ template <std::integral T>
     return result;
 }
 
+#define READ_LE(type, range, pos)                                                                  \
+    do {                                                                                           \
+        auto result = read_le<type>((range), (pos));                                               \
+        if (result)                                                                                \
+            (pos) += sizeof(type);                                                                 \
+        return result;                                                                             \
+    } while (0)
+
 [[nodiscard]] std::expected<uint8_t, DecodeError> ByteReader::read_u8() {
-    auto result = read_le<uint8_t>(_range, _pos);
-    if (result)
-        _pos += sizeof(uint8_t);
-    return result;
+    READ_LE(uint8_t, _range, _pos);
 }
 
 [[nodiscard]] std::expected<uint16_t, DecodeError> ByteReader::read_u16_le() {
-    auto result = read_le<uint16_t>(_range, _pos);
-    if (result)
-        _pos += sizeof(uint16_t);
-    return result;
+    READ_LE(uint16_t, _range, _pos);
 }
 
 [[nodiscard]] std::expected<uint32_t, DecodeError> ByteReader::read_u32_le() {
-    auto result = read_le<uint32_t>(_range, _pos);
-    if (result)
-        _pos += sizeof(uint32_t);
-    return result;
+    READ_LE(uint32_t, _range, _pos);
 }
+
+[[nodiscard]] std::expected<uint64_t, DecodeError> ByteReader::read_u64_le() {
+    READ_LE(uint64_t, _range, _pos);
+}
+
+#undef READ_LE
 
 [[nodiscard]]
 std::expected<std::string, DecodeError> ByteReader::read_string(const std::size_t size) {
@@ -101,7 +108,7 @@ std::expected<std::string, DecodeError> ByteReader::read_string(const std::size_
 }
 
 [[nodiscard]] std::expected<void, DecodeError> ByteReader::end_consumed() {
-    if (_pos != _range.size())
+    if (!has_ended())
         return std::unexpected(DecodeError::TrailingBytes{.available = _range.size(), .end = _pos});
 
     return {};
