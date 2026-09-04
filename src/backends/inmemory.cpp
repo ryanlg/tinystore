@@ -6,8 +6,7 @@
 namespace tinystore {
 
 void InMemoryBackend::put(std::string key, std::string value) {
-    const auto wal_result =
-        _wal_writer.append_put({.op = Operation::PUT, .key = key, .value = value});
+    const auto wal_result = _wal.log_put(PutRecord(key, value));
 
     // @todo: what do we actually do with serialization fails?
     (void)wal_result;

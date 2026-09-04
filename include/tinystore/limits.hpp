@@ -9,9 +9,6 @@ namespace tinystore::limits {
 constexpr uint16_t max_key_length = UINT16_MAX;
 constexpr uint32_t max_value_length = UINT32_MAX;
 
-// LogBatch
-constexpr uint8_t max_batch_length = UINT16_MAX;
-
 } // namespace tinystore::limits
 
 #endif // TINYSTORE_LIMITS_HPP

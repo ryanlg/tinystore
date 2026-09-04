@@ -21,7 +21,7 @@ class InMemoryBackend : public StoreBackend {
 
   private:
     std::unordered_map<std::string, std::string> _backing;
-    WriteAheadLogWriter _wal_writer;
+    WriteAheadLog _wal;
 };
 
 } // namespace tinystore
