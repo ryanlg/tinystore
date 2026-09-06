@@ -9,13 +9,15 @@
 #include <optional>
 #include <string>
 
+#include <tinystore/mutation.hpp>
+
 namespace tinystore {
 
 class StoreBackend {
   public:
     virtual ~StoreBackend() = default;
 
-    virtual void put(std::string key, std::string value) = 0;
+    virtual void put(PutMutation) = 0;
 
     [[nodiscard]]
     virtual std::optional<std::string> get(const std::string &key) = 0;

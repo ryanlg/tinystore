@@ -23,7 +23,8 @@ constexpr std::array<std::byte, 12> encoded_values{
 } // namespace
 
 TEST_CASE("ByteWriter emits the specified byte representation", "[ByteWriter]") {
-    tinystore::ByteWriter writer{encoded_values.size()};
+    std::vector<std::byte> bvec;
+    tinystore::ByteWriter writer{bvec};
     const std::string string_with_nul{"A\0B", 3};
     const std::array trailing_bytes{std::byte{0x00}, std::byte{0xFF}};
 
@@ -34,13 +35,7 @@ TEST_CASE("ByteWriter emits the specified byte representation", "[ByteWriter]") 
     writer.write_span(trailing_bytes);
 
     const std::vector<std::byte> expected{encoded_values.begin(), encoded_values.end()};
-    REQUIRE(std::move(writer).finalize() == expected);
-}
-
-TEST_CASE("ByteWriter can finalize an empty buffer", "[ByteWriter]") {
-    auto bytes = tinystore::ByteWriter{}.finalize();
-
-    REQUIRE(bytes.empty());
+    REQUIRE(bvec == expected);
 }
 
 TEST_CASE("ByteReader decodes sequential values and detects the end", "[ByteReader]") {

@@ -5,23 +5,21 @@
 #include <string>
 #include <unordered_map>
 
-#include <tinystore/record.hpp>
+#include <tinystore/backends/base.hpp>
+#include <tinystore/mutation.hpp>
 #include <tinystore/store.hpp>
-
-#include "../backends/base.hpp"
 
 namespace tinystore {
 
 class InMemoryBackend : public StoreBackend {
   public:
-    void put(std::string key, std::string value) override;
+    void put(PutMutation) override;
 
     [[nodiscard]]
     std::optional<std::string> get(const std::string &key) override;
 
   private:
     std::unordered_map<std::string, std::string> _backing;
-    WriteAheadLog _wal;
 };
 
 } // namespace tinystore

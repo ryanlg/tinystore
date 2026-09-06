@@ -5,7 +5,9 @@
 #include <utility>
 
 #include <tinystore/backends/inmemory.hpp>
+#include <tinystore/mutation.hpp>
 #include <tinystore/options.hpp>
+#include <tinystore/record.hpp>
 
 namespace tinystore {
 
@@ -20,16 +22,31 @@ std::unique_ptr<StoreBackend> Store::make_backend(const StoreOptions &options) {
     throw std::invalid_argument("invalid or unsupported backend type");
 }
 
-Store::Store(const StoreOptions &options) : _backend(make_backend(options)) {}
+Store::Store(const StoreOptions &options) : _backend(make_backend(options)), _next_lsn(0) {}
 
 Store::Store(std::unique_ptr<StoreBackend> backend) {
     if (!backend)
         throw std::invalid_argument("*backend cannot be nullptr");
     _backend = std::move(backend);
+    _next_lsn = 0;
 }
 
 void Store::put(std::string key, std::string value) {
-    _backend->put(std::move(key), std::move(value));
+    const auto this_lsn = _next_lsn++;
+
+    // Mutation will own all data until acknowledgement
+    PutMutation pm = {
+        .lsn = this_lsn,
+        .key = std::move(key),
+        .value = std::move(value),
+    };
+
+    // @todo: pass by mutation
+    const auto wal_result = _wal.log_put(pm);
+    // @todo: what do we actually do with serialization fails?
+    (void)wal_result;
+
+    _backend->put(std::move(pm));
 }
 
 std::optional<std::string> Store::get(const std::string &key) { return _backend->get(key); }

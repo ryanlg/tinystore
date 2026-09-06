@@ -14,8 +14,7 @@ namespace tinystore {
 
 class ByteWriter {
   public:
-    ByteWriter() = default;
-    ByteWriter(std::size_t);
+    ByteWriter(std::vector<std::byte> &bvec) : _backing(bvec) {}
 
     void write_u8(const uint8_t);
     void write_u16_le(const uint16_t);
@@ -24,10 +23,8 @@ class ByteWriter {
     void write_string(const std::string &);
     void write_span(const std::span<const std::byte>);
 
-    [[nodiscard]] std::vector<std::byte> finalize() && noexcept;
-
   private:
-    std::vector<std::byte> _backing;
+    std::vector<std::byte> &_backing;
 };
 
 class ByteReader {

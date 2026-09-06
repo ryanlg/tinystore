@@ -21,8 +21,6 @@ template <std::integral T> void write_integral_le(std::vector<std::byte> &bvec, 
     std::memcpy(bvec.data() + old_size, &value, sizeof(T));
 }
 
-ByteWriter::ByteWriter(std::size_t capacity) { _backing.reserve(capacity); };
-
 void ByteWriter::write_span(const std::span<const std::byte> span) {
     _backing.insert(_backing.end(), span.begin(), span.end());
 }
@@ -38,8 +36,6 @@ void ByteWriter::write_u16_le(uint16_t given) { write_integral_le<uint16_t>(_bac
 void ByteWriter::write_u32_le(uint32_t given) { write_integral_le<uint32_t>(_backing, given); }
 
 void ByteWriter::write_u64_le(uint64_t given) { write_integral_le<uint64_t>(_backing, given); }
-
-std::vector<std::byte> ByteWriter::finalize() && noexcept { return std::move(_backing); }
 
 [[nodiscard]]
 std::expected<void, DecodeError> check_offset_bounds(const std::size_t available,

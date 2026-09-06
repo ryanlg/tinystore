@@ -14,3 +14,11 @@ A toy KV store with log. My layoff sanity project.
     It's a layer above that.
 - Interact only programmatically for now through tests.
 - Nothing else for now, keeping the initial scope small.
+
+## Thinking Ahead
+- Frontend would be done in Rust, with C++ writing the actual code.
+  - No particular reason, just because I can and it's fun.
+  - The cut off would be the "backends". Rust would be composing these backends together according to a config file.
+  - So the backends are our public API, everything else is encapsulated.
+  - Rust would be handling client connections too, and handing off requests to C++ backends.
+- Interactive client in Rust.

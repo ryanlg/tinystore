@@ -13,6 +13,8 @@
 
 #include <tinystore/backends/base.hpp>
 #include <tinystore/options.hpp>
+#include <tinystore/record.hpp>
+#include <tinystore/types.hpp>
 
 namespace tinystore {
 
@@ -31,6 +33,9 @@ class Store {
     std::optional<std::string> get(const std::string &key);
 
   private:
+    lsn_t _next_lsn;
+    WriteAheadLog _wal;
+
     std::unique_ptr<StoreBackend> make_backend(const StoreOptions &options);
 };
 
