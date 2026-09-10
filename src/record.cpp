@@ -1,6 +1,9 @@
 #include <tinystore/record.hpp>
 
+#include <cerrno>
 #include <cstdint>
+#include <stdexcept>
+#include <utility>
 
 #include <tinystore/byte_codec.hpp>
 #include <tinystore/limits.hpp>
@@ -60,10 +63,59 @@ WriteAheadLogSerializer::serialize_mutation(const PutMutation &pm) {
 }
 
 [[nodiscard]] std::expected<void, EncodeError> WriteAheadLog::log_put(const PutMutation &pm) {
-    const auto serialize_result = _serializer.serialize_mutation(pm);
+    WriteAheadLogSerializer serializer(_stream);
+    const auto serialize_result = serializer.serialize_mutation(pm);
     if (!serialize_result)
         return std::unexpected(serialize_result.error());
+
+    _wal_file.append({_stream.begin(), _stream.end()});
+    _wal_file.sync();
+    _stream.clear();
+
     return {};
+}
+
+BufferedFileAppender::BufferedFileAppender(std::filesystem::path path) {
+    _fd = open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+}
+
+BufferedFileAppender::~BufferedFileAppender() {
+    if (_fd != -1)
+        close(_fd);
+}
+
+BufferedFileAppender::BufferedFileAppender(BufferedFileAppender &&other) noexcept
+    : _fd(std::exchange(other._fd, -1)), _buffer(std::move(other._buffer)) {}
+
+BufferedFileAppender &BufferedFileAppender::operator=(BufferedFileAppender &&other) noexcept {
+    if (this != &other) {
+        if (_fd != -1)
+            close(_fd);
+        _fd = std::exchange(other._fd, -1);
+        _buffer = std::move(other._buffer);
+    }
+    return *this;
+}
+
+void BufferedFileAppender::append(std::span<std::byte> data) {
+    _buffer.insert(_buffer.end(), data.begin(), data.end());
+}
+
+void BufferedFileAppender::sync() {
+    std::size_t written = 0;
+    while (written < _buffer.size()) {
+        const ssize_t rc = write(_fd, _buffer.data() + written, _buffer.size() - written);
+        if (rc == -1) {
+            if (errno == EINTR)
+                continue;
+            throw std::runtime_error("failed to write wal");
+        }
+        written += static_cast<std::size_t>(rc);
+    }
+
+    if (fsync(_fd) == -1)
+        throw std::runtime_error("failed to fsync wal");
+    _buffer.clear();
 }
 
 } // namespace tinystore

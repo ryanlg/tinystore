@@ -7,11 +7,14 @@ A toy KV store with log. My layoff sanity project.
 - Support two operations:
   - `put(k, v)`
   - `get(k)`
-- In memory only for now, no fault tolerance.
+- In memory only for now\*, no fault tolerance.
   - Serialization is still support for this in-memory backend so we can write the marshalling before
     getting to the more complicated parts of a file-backed store
   - Serialization of log records should be independent of the underlying storage or transmission format.
     It's a layer above that.
+  - \*However, WAL should write to disk already, otherwise it has no use.
+    - It can just be a giant file for now. We can think about segmentation later.
+    - Start with replaying _every write_. Checkpoints are for later.
 - Interact only programmatically for now through tests.
 - Nothing else for now, keeping the initial scope small.
 

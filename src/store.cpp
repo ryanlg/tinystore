@@ -1,5 +1,6 @@
 #include <tinystore/store.hpp>
 
+#include <filesystem>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -22,9 +23,10 @@ std::unique_ptr<StoreBackend> Store::make_backend(const StoreOptions &options) {
     throw std::invalid_argument("invalid or unsupported backend type");
 }
 
-Store::Store(const StoreOptions &options) : _backend(make_backend(options)), _next_lsn(0) {}
+Store::Store(const StoreOptions &options)
+    : _backend(make_backend(options)), _next_lsn(0), _wal(std::filesystem::path("./wal")) {}
 
-Store::Store(std::unique_ptr<StoreBackend> backend) {
+Store::Store(std::unique_ptr<StoreBackend> backend) : _wal(std::filesystem::path("./wal")) {
     if (!backend)
         throw std::invalid_argument("*backend cannot be nullptr");
     _backend = std::move(backend);
