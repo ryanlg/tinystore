@@ -38,6 +38,28 @@ target_include_directories(
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
+# perf
+# ---------------
+add_executable(
+    tsperf_wal_append
+    perf/wal_append.cpp
+)
+
+target_link_libraries(
+    tsperf_wal_append
+    PRIVATE
+        tinystore
+)
+
+target_compile_options(tsperf_wal_append PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+    -Werror
+    -Wconversion
+    -O3
+)
+
 # tinystore_tests
 # ---------------
 find_package(Catch2 3 REQUIRED)

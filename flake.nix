@@ -33,6 +33,7 @@
               };
             })
             cmake
+            hyperfine
             just
             lldb
             llvmPackages.clang-tools

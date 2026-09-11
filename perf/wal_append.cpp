@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-constexpr static const uint32_t ITERATION = 1'000'000;
+constexpr static const uint32_t ITERATION = 500'000;
 
 int main() {
     tinystore::Store store(tinystore::StoreOptions{tinystore::StoreBackendType::InMemory});

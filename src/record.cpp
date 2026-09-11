@@ -76,7 +76,10 @@ WriteAheadLogSerializer::serialize_mutation(const PutMutation &pm) {
 }
 
 BufferedFileAppender::BufferedFileAppender(std::filesystem::path path) {
+    // @todo: exceptions and close on failure
     _fd = open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if (_fd == -1)
+        throw std::runtime_error("failed to open wal");
 }
 
 BufferedFileAppender::~BufferedFileAppender() {
@@ -113,8 +116,14 @@ void BufferedFileAppender::sync() {
         written += static_cast<std::size_t>(rc);
     }
 
+#if defined(__DARWIN__) || defined(__APPLE__)
+    // fsync() on macOS doesn't make the drive flush its own cache, F_FULLFSYNC does.
+    if (fcntl(_fd, F_FULLFSYNC) == -1)
+        throw std::runtime_error("failed to fcntl F_FULLFSYNC");
+#else
     if (fsync(_fd) == -1)
         throw std::runtime_error("failed to fsync wal");
+#endif
     _buffer.clear();
 }
 
