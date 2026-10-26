@@ -1,3 +1,5 @@
 build
 .direnv
 .DS_Store
+build-*
+/wal

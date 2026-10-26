@@ -108,6 +108,7 @@ file(GLOB_RECURSE FORMAT_SOURCES
     "${PROJECT_SOURCE_DIR}/include/*.hpp"
     "${PROJECT_SOURCE_DIR}/tests/*.cpp"
     "${PROJECT_SOURCE_DIR}/tests/*.hpp"
+    "${PROJECT_SOURCE_DIR}/perf/*.cpp"
 )
 
 add_custom_target(format
